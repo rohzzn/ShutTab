@@ -1,0 +1,32 @@
+{
+  "enabled": true,
+  "allowlistMode": false,
+  "defaultBlockMode": "hard",
+  "rules": [
+    {
+      "id": "work-twitter",
+      "pattern": "*.twitter.com",
+      "type": "wildcard",
+      "mode": "soft",
+      "schedule": {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "start": "09:00",
+        "end": "17:00",
+        "timezone": "auto"
+      },
+      "notes": "Work hours"
+    },
+    {
+      "id": "youtube",
+      "pattern": "https?://(www\\.)?youtube\\.com/.*",
+      "type": "regex",
+      "mode": "hard"
+    }
+  ]
+}

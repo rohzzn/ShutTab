@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Focus Blocker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Focus Blocker</h1>
+    <label class="switch">
+      <input type="checkbox" id="enabledToggle"/>
+      <span class="slider"></span>
+    </label>
+    <div class="row">
+      <button id="addSite">Add current site to blocklist</button>
+    </div>
+    <div class="row small" id="status"></div>
+    <a class="options" href="#" id="openOptions">Open Options</a>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

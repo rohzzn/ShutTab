@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Focus Blocker – Options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Focus Blocker</h1>
+      <p class="subtitle">Manage your site blocking rules and settings</p>
+    </header>
+
+    <div class="content">
+      <section class="card">
+        <div class="card-header">
+          <h2>Settings</h2>
+        </div>
+        <div class="card-content">
+          <div class="setting-group">
+            <div class="setting-item">
+              <label class="switch-label">
+                <input type="checkbox" id="enabled">
+                <span class="switch">
+                  <span class="switch-slider"></span>
+                </span>
+                <span class="setting-title">Enable blocking</span>
+              </label>
+            </div>
+            
+            <div class="setting-item">
+              <label class="switch-label">
+                <input type="checkbox" id="allowlistMode">
+                <span class="switch">
+                  <span class="switch-slider"></span>
+                </span>
+                <span class="setting-title">Allowlist mode</span>
+              </label>
+              <p class="setting-description">Block everything except allowed sites</p>
+            </div>
+
+            <div class="setting-item">
+              <label class="setting-title">Default block mode</label>
+              <select id="defaultBlockMode" class="select">
+                <option value="hard">Hard (instant redirect)</option>
+                <option value="soft">Soft (continue after delay)</option>
+              </select>
+            </div>
+
+            <div class="setting-item">
+              <label class="switch-label">
+                <input type="checkbox" id="requirePin">
+                <span class="switch">
+                  <span class="switch-slider"></span>
+                </span>
+                <span class="setting-title">Require PIN for changes</span>
+              </label>
+            </div>
+
+            <div class="setting-item">
+              <label class="setting-title">Override durations (minutes)</label>
+              <input type="text" id="overrideDurations" placeholder="5,15,30" class="input"/>
+              <p class="setting-description">Comma-separated list of temporary override durations</p>
+            </div>
+          </div>
+          
+          <div class="actions">
+            <button id="saveGlobal" class="btn-primary">Save Settings</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Blocking Rules</h2>
+          <p class="card-description">Add and manage your site blocking rules</p>
+        </div>
+        <div class="card-content">
+          <div class="add-rule-form">
+            <div class="form-row">
+              <input type="text" id="pattern" placeholder="*.twitter.com or example.com" class="input flex-1"/>
+              <select id="type" class="select">
+                <option value="wildcard">Wildcard</option>
+                <option value="exact">Exact domain</option>
+                <option value="regex">Regex</option>
+              </select>
+              <select id="mode" class="select">
+                <option value="hard">Hard</option>
+                <option value="soft">Soft</option>
+              </select>
+            </div>
+            
+            <div class="form-row">
+              <label class="checkbox-label">
+                <input type="checkbox" id="allowRule"/>
+                <span class="checkbox"></span>
+                Allow rule (for allowlist mode)
+              </label>
+            </div>
+
+            <div class="form-row schedule-row">
+              <input type="text" id="schedDays" placeholder="Days: 1,2,3,4,5" class="input"/>
+              <input type="text" id="schedStart" placeholder="Start: 09:00" class="input"/>
+              <input type="text" id="schedEnd" placeholder="End: 17:00" class="input"/>
+            </div>
+
+            <div class="form-row">
+              <input type="text" id="notes" placeholder="Notes (optional)" class="input flex-1"/>
+              <button id="addRule" class="btn-primary">Add Rule</button>
+            </div>
+          </div>
+
+          <div class="rules-table-container">
+            <table id="rulesTbl" class="rules-table">
+              <thead>
+                <tr>
+                  <th>Pattern</th>
+                  <th>Type</th>
+                  <th>Mode</th>
+                  <th>Schedule</th>
+                  <th>Allow</th>
+                  <th>Notes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Import / Export</h2>
+          <p class="card-description">Backup and restore your blocking rules</p>
+        </div>
+        <div class="card-content">
+          <div class="form-row">
+            <button id="exportBtn" class="btn-secondary">Export Configuration</button>
+            <label for="importFile" class="btn-secondary file-label">
+              Import Configuration
+              <input type="file" id="importFile" accept="application/json" class="file-input"/>
+            </label>
+          </div>
+          <pre id="exportOut" class="export-output"></pre>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Test URL</h2>
+          <p class="card-description">Test if a URL matches your blocking rules</p>
+        </div>
+        <div class="card-content">
+          <div class="form-row">
+            <input type="text" id="testUrl" placeholder="https://www.example.com" class="input flex-1"/>
+            <button id="testBtn" class="btn-secondary">Test</button>
+          </div>
+          <div id="testRes" class="test-result"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Activity</h2>
+          <p class="card-description">Recent blocking events</p>
+        </div>
+        <div class="card-content">
+          <div id="activity" class="activity-log"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
