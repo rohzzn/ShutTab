@@ -1,5 +1,5 @@
 
-# ShutTab – Free Chrome Site Blocker
+# ShutTab – Free Site Blocker
 
 A privacy-first, fully local site blocker with schedules, soft/hard block, and temporary overrides.
 
