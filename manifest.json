@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Focus Blocker \u2013 Free Site Blocker",
+  "name": "ShutTab \u2013 Free Site Blocker",
   "version": "1.0.0",
   "default_locale": "en",
   "description": "A free, privacy-friendly site blocker with schedules, soft/hard block, and temporary overrides. All local, no tracking.",
@@ -12,7 +12,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Focus Blocker"
+    "default_title": "ShutTab"
   },
   "background": {
     "service_worker": "service-worker.js",

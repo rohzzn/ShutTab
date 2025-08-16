@@ -1,5 +1,5 @@
 
-# Focus Blocker – Free Chrome Site Blocker (MV3)
+# ShutTab – Free Chrome Site Blocker (MV3)
 
 A privacy-first, fully local site blocker with schedules, soft/hard block, and temporary overrides.
 
@@ -18,7 +18,7 @@ A privacy-first, fully local site blocker with schedules, soft/hard block, and t
 2. Go to `chrome://extensions`.
 3. Enable **Developer mode** (top right).
 4. Click **Load unpacked** and choose the extracted folder.
-5. Pin **Focus Blocker** to your toolbar.
+5. Pin **ShutTab** to your toolbar.
 
 ## Quick Test
 - Open the popup → "Add current site to blocklist". Try visiting the site again.
