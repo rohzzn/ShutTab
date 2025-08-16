@@ -1,6 +1,6 @@
 # ShutTab Privacy Policy
 
-**Last updated:** December 2024
+**Last updated:** Augest 2025
 
 ## Overview
 
