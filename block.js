@@ -17,17 +17,66 @@ const quotes = [
 ];
 
 (async function main(){
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const urlText = tab?.openerTabId ? document.referrer : document.referrer; // not always reliable
-  // Better: use chrome.tabs.getCurrent not supported; show placeholder
-  let targetUrl = document.referrer || "";
-  if (!targetUrl) {
-    // Try to get it from history: not allowed. Use hash param if available
-    const fromParam = params.get("u");
-    if (fromParam) targetUrl = decodeURIComponent(fromParam);
+  // Try multiple methods to get the blocked URL
+  let targetUrl = "";
+  
+  // Method 1: Check URL parameter (most reliable when available)
+  const fromParam = params.get("u");
+  if (fromParam) {
+    targetUrl = decodeURIComponent(fromParam);
   }
-  qs("url").textContent = targetUrl || "(unknown URL)";
-  qs("ruleInfo").textContent = rid && rid !== "__catchall__" ? `Matched rule: ${rid} (${mode})` : (rid === "__catchall__" ? "Allowlist mode: site not allowed" : "");
+  
+  // Method 2: Try to get from current tab
+  if (!targetUrl) {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url && !tab.url.startsWith('chrome-extension://')) {
+        targetUrl = tab.url;
+      }
+    } catch (e) {
+      console.log("Cannot access tab URL:", e);
+    }
+  }
+  
+  // Method 3: Use document.referrer as fallback
+  if (!targetUrl) {
+    targetUrl = document.referrer || "";
+  }
+  
+  // Method 4: Try to reconstruct URL from rule pattern if we have it
+  if (!targetUrl && rid && rid !== "__catchall__") {
+    try {
+      const settings = await msg("getSettings");
+      const rule = settings.rules.find(r => r.id === rid);
+      if (rule && rule.pattern) {
+        if (rule.type === "wildcard" && rule.pattern.startsWith("*.")) {
+          targetUrl = `https://${rule.pattern.slice(2)}`;
+        } else if (rule.type === "exact") {
+          targetUrl = `https://${rule.pattern}`;
+        }
+      }
+    } catch (e) {
+      console.log("Cannot reconstruct URL from rule:", e);
+    }
+  }
+  
+  // Display URL
+  if (targetUrl && !targetUrl.startsWith('chrome-extension://')) {
+    qs("url").textContent = targetUrl;
+  } else {
+    qs("url").textContent = "Blocked site";
+  }
+  
+  // Clean up rule info display
+  if (rid === "__catchall__") {
+    qs("ruleInfo").textContent = "Site not in allowlist";
+  } else if (mode === "soft") {
+    qs("ruleInfo").textContent = "Soft block - continue after countdown";
+  } else if (mode === "hard") {
+    qs("ruleInfo").textContent = "Hard block - use temporary access if needed";
+  } else {
+    qs("ruleInfo").textContent = "";
+  }
 
   // Log
   await msg("logBlocked", { url: targetUrl, rid });
@@ -71,8 +120,53 @@ const quotes = [
   qsa("#overrideControls button").forEach(b => {
     b.addEventListener("click", async () => {
       const minutes = parseInt(b.getAttribute("data-min"), 10);
-      const u = new URL(targetUrl || "https://example.com");
-      await msg("overrideHostname", { hostname: u.hostname, minutes, url: targetUrl });
+      
+      let hostname = "";
+      
+      // Try to get hostname from targetUrl
+      if (targetUrl) {
+        try {
+          const u = new URL(targetUrl);
+          hostname = u.hostname.toLowerCase();
+        } catch (e) {
+          console.log("Could not parse targetUrl, trying rule pattern");
+        }
+      }
+      
+      // If we couldn't get hostname from URL, try to get it from the rule pattern
+      if (!hostname && rid && rid !== "__catchall__") {
+        try {
+          const settings = await msg("getSettings");
+          const rule = settings.rules.find(r => r.id === rid);
+          if (rule && rule.pattern) {
+            if (rule.type === "wildcard" && rule.pattern.startsWith("*.")) {
+              hostname = rule.pattern.slice(2).toLowerCase();
+            } else if (rule.type === "exact") {
+              hostname = rule.pattern.toLowerCase();
+            }
+          }
+        } catch (e) {
+          console.log("Could not get hostname from rule pattern");
+        }
+      }
+      
+      if (!hostname) {
+        console.error("No hostname available for override");
+        alert("Cannot set temporary access - hostname unknown");
+        return;
+      }
+      
+      console.log(`Setting override for hostname: ${hostname}, minutes: ${minutes}`);
+      
+      const result = await msg("overrideHostname", { hostname, minutes, url: targetUrl || `https://${hostname}` });
+      if (result.ok) {
+        console.log(`Override set until: ${new Date(result.until)}`);
+        // Show success and navigate
+        window.location.href = targetUrl || `https://${hostname}`;
+      } else {
+        console.error("Override failed:", result.error);
+        alert("Failed to set temporary access");
+      }
     });
   });
 
