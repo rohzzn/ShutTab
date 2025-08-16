@@ -238,6 +238,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ ok: true, added: rule });
       return;
     }
+    if (msg.type === "forceRecompute") {
+      await recomputeDynamicRules("forceRecompute");
+      sendResponse({ ok: true });
+      return;
+    }
+    if (msg.type === "clearOverrides") {
+      const s = await getAll();
+      s.overrides = {};
+      await saveAll(s);
+      await recomputeDynamicRules("clearOverrides");
+      sendResponse({ ok: true });
+      return;
+    }
     sendResponse({ ok: false, error: "Unknown message" });
   })();
   return true;

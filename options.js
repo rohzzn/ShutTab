@@ -148,4 +148,31 @@ document.getElementById("testBtn").addEventListener("click", async () => {
   }
 });
 
+// Debug tools
+document.getElementById("forceRecompute").addEventListener("click", async () => {
+  const debugDiv = document.getElementById("debugOutput");
+  debugDiv.textContent = "Forcing rule recomputation...";
+  
+  const res = await msg("forceRecompute");
+  if (res.ok) {
+    debugDiv.textContent = "Rule recomputation completed successfully. This should fix URL detection issues.";
+  } else {
+    debugDiv.textContent = "Failed to recompute rules: " + (res.error || "Unknown error");
+  }
+});
+
+document.getElementById("clearOverrides").addEventListener("click", async () => {
+  const debugDiv = document.getElementById("debugOutput");
+  debugDiv.textContent = "Clearing all overrides...";
+  
+  const res = await msg("clearOverrides");
+  
+  if (res.ok) {
+    debugDiv.textContent = "All temporary overrides cleared successfully.";
+    await refresh();
+  } else {
+    debugDiv.textContent = "Failed to clear overrides: " + (res.error || "Unknown error");
+  }
+});
+
 refresh();
