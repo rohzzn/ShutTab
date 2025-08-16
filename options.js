@@ -82,9 +82,17 @@ document.getElementById("addRule").addEventListener("click", async () => {
     rule.schedule = { days, start, end, timezone: "auto" };
   }
 
+  console.log("=== OPTIONS ADD RULE DEBUG ===");
+  console.log("Adding rule:", rule);
+  
   const res = await msg("addRule", { rule });
-  if (!res.ok) alert("Failed to add: " + (res.error||""));
-  else {
+  console.log("Add rule response:", res);
+  
+  if (!res.ok) {
+    alert("Failed to add: " + (res.error||""));
+    console.error("❌ Add rule failed:", res);
+  } else {
+    console.log("✅ Rule added successfully:", res);
     // Clear form after successful add
     document.getElementById("pattern").value = "";
     document.getElementById("allowRule").checked = false;
@@ -172,6 +180,81 @@ document.getElementById("clearOverrides").addEventListener("click", async () => 
     await refresh();
   } else {
     debugDiv.textContent = "Failed to clear overrides: " + (res.error || "Unknown error");
+  }
+});
+
+document.getElementById("debugRules").addEventListener("click", async () => {
+  const debugDiv = document.getElementById("debugOutput");
+  debugDiv.textContent = "Debugging current rules...";
+  
+  try {
+    const settings = await msg("getSettings");
+    const info = [];
+    
+    info.push(`Total rules: ${settings.rules.length}`);
+    info.push(`Extension enabled: ${settings.enabled}`);
+    info.push(`Allowlist mode: ${settings.allowlistMode}`);
+    info.push("");
+    info.push("Rules:");
+    
+    settings.rules.forEach((rule, i) => {
+      info.push(`${i + 1}. ${rule.pattern} (${rule.type}, ${rule.mode})`);
+    });
+    
+    info.push("");
+    info.push("Active overrides:");
+    const now = Date.now();
+    Object.entries(settings.overrides).forEach(([host, exp]) => {
+      if (exp > now) {
+        info.push(`- ${host} until ${new Date(exp).toLocaleString()}`);
+      }
+    });
+    
+    debugDiv.innerHTML = `<pre>${info.join('\n')}</pre>`;
+    
+    // Also trigger a rule recomputation to see logs
+    await msg("forceRecompute");
+    
+  } catch (error) {
+    debugDiv.textContent = "Debug failed: " + error.message;
+  }
+});
+
+document.getElementById("fixPatterns").addEventListener("click", async () => {
+  const debugDiv = document.getElementById("debugOutput");
+  debugDiv.textContent = "Fixing bad patterns...";
+  
+  try {
+    const settings = await msg("getSettings");
+    let fixed = 0;
+    
+    settings.rules.forEach(rule => {
+      let oldPattern = rule.pattern;
+      
+      // Fix patterns that start with *.www.
+      if (rule.pattern.startsWith('*.www.')) {
+        rule.pattern = rule.pattern.replace('*.www.', '*.');
+        fixed++;
+        console.log(`Fixed pattern: ${oldPattern} → ${rule.pattern}`);
+      }
+      
+      // Fix other common issues
+      if (rule.pattern === '*.youtube.com' || rule.pattern === '*.www.youtube.com') {
+        rule.pattern = '*.youtube.com';
+        if (oldPattern !== rule.pattern) fixed++;
+      }
+    });
+    
+    if (fixed > 0) {
+      await msg("saveSettings", { settings });
+      debugDiv.textContent = `✅ Fixed ${fixed} bad patterns. Rules recomputed.`;
+      await refresh();
+    } else {
+      debugDiv.textContent = "No bad patterns found to fix.";
+    }
+    
+  } catch (error) {
+    debugDiv.textContent = "Pattern fix failed: " + error.message;
   }
 });
 

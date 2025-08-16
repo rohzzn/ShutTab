@@ -9,9 +9,18 @@ function msg(type, payload={}) {
 }
 
 (async function init(){
-  const s = await msg("getSettings");
-  enabledToggle.checked = !!s.enabled;
-  statusDiv.textContent = s.enabled ? "Blocking is ON" : "Blocking is OFF";
+  console.log("=== POPUP INIT DEBUG ===");
+  try {
+    console.log("Requesting settings...");
+    const s = await msg("getSettings");
+    console.log("Settings received:", s);
+    enabledToggle.checked = !!s.enabled;
+    statusDiv.textContent = s.enabled ? "Blocking is ON" : "Blocking is OFF";
+    console.log("✅ Popup initialized successfully");
+  } catch (error) {
+    console.error("❌ Popup init failed:", error);
+    statusDiv.textContent = "Error initializing";
+  }
 })();
 
 enabledToggle.addEventListener("change", async () => {
@@ -21,26 +30,42 @@ enabledToggle.addEventListener("change", async () => {
 
 addBtn.addEventListener("click", async () => {
   try {
+    console.log("=== ADD SITE DEBUG START ===");
     statusDiv.textContent = "Adding site...";
+    
+    // First, let's check what tab we're on
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      console.log("Current tab from popup:", tab);
+    } catch (e) {
+      console.error("Cannot query tabs from popup:", e);
+    }
+    
+    console.log("Sending addCurrentSite message...");
     const r = await msg("addCurrentSite");
-    if (r.ok) {
+    console.log("Received response:", r);
+    
+    if (r && r.ok) {
       statusDiv.textContent = `✅ Added rule for ${r.added.pattern}`;
       statusDiv.style.color = "#4ade80";
+      console.log("✅ Successfully added rule:", r.added);
     } else {
-      statusDiv.textContent = `❌ Failed: ${r.error}`;
+      statusDiv.textContent = `❌ Failed: ${r ? r.error : 'No response'}`;
       statusDiv.style.color = "#f87171";
-      console.error("addCurrentSite failed:", r.error);
+      console.error("❌ addCurrentSite failed:", r);
     }
   } catch (error) {
     statusDiv.textContent = `❌ Error: ${error.message}`;
     statusDiv.style.color = "#f87171";
-    console.error("addCurrentSite exception:", error);
+    console.error("❌ addCurrentSite exception:", error);
   }
   
-  // Reset color after 3 seconds
+  console.log("=== ADD SITE DEBUG END ===");
+  
+  // Reset color after 5 seconds (longer to read)
   setTimeout(() => {
     statusDiv.style.color = "";
-  }, 3000);
+  }, 5000);
 });
 
 openOptions.addEventListener("click", (e) => {

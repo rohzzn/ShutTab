@@ -35,6 +35,7 @@
         "block.html",
         "block.js",
         "block.css",
+        "debug-test.html",
         "icons/*"
       ],
       "matches": [

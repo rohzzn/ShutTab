@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ShutTab Debug Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #191919; color: #fff; }
+        button { margin: 10px; padding: 10px; background: #333; color: #fff; border: 1px solid #555; cursor: pointer; }
+        button:hover { background: #555; }
+        .result { margin: 10px 0; padding: 10px; background: #222; border: 1px solid #444; }
+        .success { border-color: #4ade80; }
+        .error { border-color: #f87171; }
+    </style>
+</head>
+<body>
+    <h1>ShutTab Debug Test Page</h1>
+    <p>Use this page to test ShutTab functionality step by step.</p>
+    
+    <h2>Tests</h2>
+    <button id="test1">1. Test Basic Message</button>
+    <button id="test2">2. Test Get Settings</button>
+    <button id="test3">3. Test Add Manual Rule</button>
+    <button id="test4">4. Test Add Current Site (Use on Real Website!)</button>
+    <button id="test5">5. Test Tabs Permission</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function log(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = `result ${isError ? 'error' : 'success'}`;
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            document.getElementById('results').appendChild(div);
+            console.log(message);
+        }
+
+        function msg(type, payload = {}) {
+            return new Promise(res => chrome.runtime.sendMessage({ type, ...payload }, res));
+        }
+
+        async function testBasicMessage() {
+            try {
+                log("Testing basic message...");
+                const response = await msg("getSettings");
+                if (response) {
+                    log("✅ Basic message works - got response");
+                } else {
+                    log("❌ Basic message failed - no response", true);
+                }
+            } catch (error) {
+                log("❌ Basic message error: " + error.message, true);
+            }
+        }
+
+        async function testGetSettings() {
+            try {
+                log("Testing getSettings...");
+                const settings = await msg("getSettings");
+                log("✅ Settings: " + JSON.stringify(settings, null, 2));
+            } catch (error) {
+                log("❌ GetSettings error: " + error.message, true);
+            }
+        }
+
+        async function testAddManualRule() {
+            try {
+                log("Testing addRule with manual rule...");
+                const rule = {
+                    pattern: "*.test-site-" + Date.now() + ".com",
+                    type: "wildcard",
+                    mode: "hard",
+                    notes: "Debug test rule"
+                };
+                const response = await msg("addRule", { rule });
+                if (response && response.ok) {
+                    log("✅ Manual rule added: " + rule.pattern);
+                } else {
+                    log("❌ Manual rule failed: " + (response ? response.error : "No response"), true);
+                }
+            } catch (error) {
+                log("❌ Manual rule error: " + error.message, true);
+            }
+        }
+
+        async function testAddCurrentSite() {
+            try {
+                log("Testing addCurrentSite...");
+                log("⚠️ NOTE: This will fail on extension pages - use on real websites!");
+                const response = await msg("addCurrentSite");
+                if (response && response.ok) {
+                    log("✅ Current site added: " + response.added.pattern);
+                } else {
+                    const error = response ? response.error : "No response";
+                    if (error === "Cannot block browser pages") {
+                        log("ℹ️ Expected: Cannot block extension pages. Try on reddit.com, youtube.com, etc.");
+                    } else {
+                        log("❌ Current site failed: " + error, true);
+                    }
+                }
+            } catch (error) {
+                log("❌ Current site error: " + error.message, true);
+            }
+        }
+
+        async function testTabsPermission() {
+            try {
+                log("Testing tabs permission...");
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (tab) {
+                    log("✅ Tabs permission works - current URL: " + tab.url);
+                } else {
+                    log("❌ Tabs permission failed - no tab", true);
+                }
+            } catch (error) {
+                log("❌ Tabs permission error: " + error.message, true);
+            }
+        }
+
+        // Setup event listeners
+        window.addEventListener('load', () => {
+            log("Debug test page loaded");
+            
+            // Add event listeners for buttons
+            document.getElementById('test1').addEventListener('click', testBasicMessage);
+            document.getElementById('test2').addEventListener('click', testGetSettings);
+            document.getElementById('test3').addEventListener('click', testAddManualRule);
+            document.getElementById('test4').addEventListener('click', testAddCurrentSite);
+            document.getElementById('test5').addEventListener('click', testTabsPermission);
+            
+            // Auto-run basic test
+            testBasicMessage();
+        });
+    </script>
+</body>
+</html>

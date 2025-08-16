@@ -82,8 +82,16 @@ async function recomputeDynamicRules(reason = "recompute") {
     }
   }
 
+  console.log("=== APPLYING DNR RULES ===");
+  console.log("Rules to remove:", toRemove);
+  console.log("Rules to add:", toAdd);
+  
   await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: toRemove, addRules: toAdd });
-  console.log(`Recomputed rules (${reason}): removed ${toRemove.length}, added ${toAdd.length}`);
+  
+  // Verify rules were actually applied
+  const applied = await chrome.declarativeNetRequest.getDynamicRules();
+  console.log("Current DNR rules after update:", applied);
+  console.log(`✅ Recomputed rules (${reason}): removed ${toRemove.length}, added ${toAdd.length}, total active: ${applied.length}`);
   
   // Set alarm to the next minute to reevaluate schedules
   const nextT = nextScheduleBoundary(new Date(), null).getTime();
@@ -111,11 +119,18 @@ function hostnameFromPattern(rule) {
 
 // Messages from UI pages
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  console.log("=== SERVICE WORKER MESSAGE RECEIVED ===");
+  console.log("Message type:", msg.type);
+  console.log("Full message:", msg);
+  console.log("Sender:", sender);
+  
+  // Handle async messages properly
   (async () => {
-    if (msg.type === "getSettings") {
-      sendResponse(await getAll());
-      return;
-    }
+    try {
+      if (msg.type === "getSettings") {
+        sendResponse(await getAll());
+        return;
+      }
     if (msg.type === "setEnabled") {
       const s = await getAll();
       s.enabled = !!msg.enabled;
@@ -242,13 +257,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           return;
         }
         
-        const host = hostnameFromUrl(tab.url);
-        console.log("addCurrentSite: Extracted hostname:", host);
+        let host = hostnameFromUrl(tab.url);
+        console.log("addCurrentSite: Raw hostname:", host);
         
         if (!host) {
           console.error("addCurrentSite: Could not extract hostname from:", tab.url);
           sendResponse({ ok: false, error: "Could not extract hostname" });
           return;
+        }
+        
+        // Remove www. prefix to create better patterns
+        if (host.startsWith('www.')) {
+          host = host.slice(4);
+          console.log("addCurrentSite: Normalized hostname (removed www):", host);
         }
         
         const s = await getAll();
@@ -288,7 +309,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ ok: true });
       return;
     }
-    sendResponse({ ok: false, error: "Unknown message" });
+      console.warn("Unknown message type:", msg.type);
+      sendResponse({ ok: false, error: "Unknown message" });
+    } catch (error) {
+      console.error("=== SERVICE WORKER MESSAGE ERROR ===");
+      console.error("Error processing message:", error);
+      sendResponse({ ok: false, error: error.message });
+    }
   })();
   return true;
 });
