@@ -20,12 +20,27 @@ enabledToggle.addEventListener("change", async () => {
 });
 
 addBtn.addEventListener("click", async () => {
-  const r = await msg("addCurrentSite");
-  if (r.ok) {
-    statusDiv.textContent = `Added rule for ${r.added.pattern}`;
-  } else {
-    statusDiv.textContent = `Failed: ${r.error}`;
+  try {
+    statusDiv.textContent = "Adding site...";
+    const r = await msg("addCurrentSite");
+    if (r.ok) {
+      statusDiv.textContent = `✅ Added rule for ${r.added.pattern}`;
+      statusDiv.style.color = "#4ade80";
+    } else {
+      statusDiv.textContent = `❌ Failed: ${r.error}`;
+      statusDiv.style.color = "#f87171";
+      console.error("addCurrentSite failed:", r.error);
+    }
+  } catch (error) {
+    statusDiv.textContent = `❌ Error: ${error.message}`;
+    statusDiv.style.color = "#f87171";
+    console.error("addCurrentSite exception:", error);
   }
+  
+  // Reset color after 3 seconds
+  setTimeout(() => {
+    statusDiv.style.color = "";
+  }, 3000);
 });
 
 openOptions.addEventListener("click", (e) => {

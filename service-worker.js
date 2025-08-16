@@ -6,9 +6,10 @@ import { verifyPin } from "./lib/crypto.js";
 
 // Internal: compute active DNR rules from settings
 async function recomputeDynamicRules(reason = "recompute") {
-  const settings = await getAll();
   const now = new Date();
   await clearExpiredOverrides();
+  // Re-fetch settings AFTER clearing expired overrides
+  const settings = await getAll();
 
   const toAdd = [];
   const toRemove = [];
@@ -82,9 +83,12 @@ async function recomputeDynamicRules(reason = "recompute") {
   }
 
   await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: toRemove, addRules: toAdd });
+  console.log(`Recomputed rules (${reason}): removed ${toRemove.length}, added ${toAdd.length}`);
+  
   // Set alarm to the next minute to reevaluate schedules
   const nextT = nextScheduleBoundary(new Date(), null).getTime();
   const delayMin = Math.max(0.02, (nextT - Date.now()) / 60000);
+  console.log(`Setting alarm for ${delayMin} minutes (next rebalance: ${new Date(nextT).toISOString()})`);
   await chrome.alarms.create("rebalance", { delayInMinutes: delayMin });
 }
 
@@ -221,22 +225,55 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return;
     }
     if (msg.type === "addCurrentSite") {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab || !tab.url) { sendResponse({ ok: false, error: "No active tab" }); return; }
-      const host = hostnameFromUrl(tab.url);
-      const s = await getAll();
-      const rule = {
-        id: "r_" + Math.random().toString(36).slice(2,10),
-        pattern: "*." + host,
-        type: "wildcard",
-        mode: s.defaultBlockMode || "hard",
-        notes: "Added from popup"
-      };
-      s.rules.push(rule);
-      await saveAll(s);
-      await recomputeDynamicRules("addCurrentSite");
-      sendResponse({ ok: true, added: rule });
-      return;
+      try {
+        console.log("addCurrentSite: Starting...");
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        console.log("addCurrentSite: Got tab:", tab);
+        
+        if (!tab || !tab.url) { 
+          console.error("addCurrentSite: No active tab or URL");
+          sendResponse({ ok: false, error: "No active tab" }); 
+          return; 
+        }
+        
+        if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+          console.error("addCurrentSite: Cannot block browser/extension pages");
+          sendResponse({ ok: false, error: "Cannot block browser pages" });
+          return;
+        }
+        
+        const host = hostnameFromUrl(tab.url);
+        console.log("addCurrentSite: Extracted hostname:", host);
+        
+        if (!host) {
+          console.error("addCurrentSite: Could not extract hostname from:", tab.url);
+          sendResponse({ ok: false, error: "Could not extract hostname" });
+          return;
+        }
+        
+        const s = await getAll();
+        const rule = {
+          id: "r_" + Math.random().toString(36).slice(2,10),
+          pattern: "*." + host,
+          type: "wildcard",
+          mode: s.defaultBlockMode || "hard",
+          notes: "Added from popup"
+        };
+        
+        console.log("addCurrentSite: Created rule:", rule);
+        
+        s.rules.push(rule);
+        await saveAll(s);
+        await recomputeDynamicRules("addCurrentSite");
+        
+        console.log("addCurrentSite: Success!");
+        sendResponse({ ok: true, added: rule });
+        return;
+      } catch (error) {
+        console.error("addCurrentSite: Error:", error);
+        sendResponse({ ok: false, error: error.message });
+        return;
+      }
     }
     if (msg.type === "forceRecompute") {
       await recomputeDynamicRules("forceRecompute");
@@ -280,6 +317,7 @@ function matchUrl(url, r) {
 
 // alarms
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  console.log("Alarm triggered:", alarm.name, "at", new Date().toISOString());
   if (alarm.name === "rebalance") {
     await recomputeDynamicRules("alarm");
   }
